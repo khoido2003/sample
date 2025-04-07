@@ -4,3 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+tokio = { version = "1", features = ["full"] }
+minifb = "0.25"
+rand = "0.8"
+pixels = "0.13"  # Latest as of April 2025
+winit = "0.30"   # For windowing and input
+winit_input_helper = "0.16"  # Simplifies input handling

@@ -8,6 +8,8 @@ use std::{
 
 use tokio::{net::UdpSocket, sync::RwLock, time::interval};
 
+/////////////////////////////////////////////////////////
+
 const MAX_CLIENT: usize = 32;
 const SECONDS_PER_TICK: f32 = 1.0 / 60.0;
 const ACCELERATION: f32 = 0.5;
@@ -118,9 +120,9 @@ impl PacketBuffer {
         ))
     }
 
-    fn push(&mut self, data: &[u8], endpoint: SocketAddr) {
+    fn push(&mut self, data: Vec<u8>, endpoint: SocketAddr) {
         self.0.push(Packet {
-            data: data.to_vec(),
+            data,
             endpoint,
             release_time: Instant::now(),
         });
@@ -208,7 +210,7 @@ async fn listen_handler(
 
                 if let Ok((bytes_received, from_addr)) = result {
                     let mut server_context = server_context.write().await;
-                    server_context.recv_buffer.push(&raw_buffer[..bytes_received], from_addr);
+                    server_context.recv_buffer.push(raw_buffer[..bytes_received].to_vec(), from_addr);
                 }
             }
 
@@ -246,14 +248,14 @@ async fn listen_handler(
                         packet.extend_from_slice(&context.client_objects[i].speed.to_le_bytes());
 
                         for j in 0..MAX_CLIENT {
-                            if i != j && context.client_enpoints[i].is_some() {
+                            if i != j && context.client_enpoints[j].is_some() {
                                 packet.extend_from_slice(&(j as u16).to_le_bytes());
                                 packet.extend_from_slice(&context.client_objects[j].x.to_le_bytes());
                                 packet.extend_from_slice(&context.client_objects[j].y.to_le_bytes());
                                 packet.extend_from_slice(&context.client_objects[j].facing.to_le_bytes());
                             }
                         }
-                        context.send_buffer.push(&packet, endpoint.address);
+                        context.send_buffer.push(packet, endpoint.address);
                     }
                 });
 
@@ -291,7 +293,7 @@ async fn process(server_context: Arc<RwLock<ServerContext>>) {
                 if let Some(slot) = slot {
                     response.push(1);
                     response.extend_from_slice(&(slot as u16).to_le_bytes());
-                    server_context.send_buffer.push(&response, from_addr);
+                    server_context.send_buffer.push(response, from_addr);
 
                     server_context.client_enpoints[slot] = Some(IpEndpoint { address: from_addr });
 
